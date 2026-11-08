@@ -287,6 +287,7 @@ def main():
         chunked_decode=chunked_decode,
     )
 
+    print(f"Seed: {model.last_seed}")
     _save_output(audio, model.model.sample_rate, args.output, batch_size)
 
 

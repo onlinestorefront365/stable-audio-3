@@ -22,6 +22,9 @@ class StableAudioModel:
         self.model_half = model_half
         self.same = self.model.pretransform
         self.dit = self.model.model
+        # Seed used by the most recent generate() call; resolves seed=-1 to the
+        # random value actually drawn, so a good result can be reproduced.
+        self.last_seed = None
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cudnn.allow_tf32 = False
         torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction = False
@@ -129,7 +132,8 @@ class StableAudioModel:
             conditioning_tensors: A dictionary of precomputed conditioning tensors to use for generation.
             negative_conditioning: A dictionary of negative conditioning parameters for classifier-free guidance.
             negative_conditioning_tensors: A dictionary of precomputed negative conditioning tensors for classifier-free guidance
-            seed: The random seed to use for generation, or -1 to use a random seed.
+            seed: The random seed to use for generation, or -1 to use a random seed. The seed
+                actually used is stored in self.last_seed after the call.
             init_audio: A tuple of (sample_rate, audio) to use as the initial audio for generation.
             init_noise_level: The noise level to use when generating from an initial audio sample.
             inpaint_audio: A tuple of (sample_rate, audio) to use as the source audio for inpainting. The inpaint region will be determined by the inpaint_mask or inpaint_mask_start_seconds/inpaint_mask_end_seconds parameters.
@@ -238,7 +242,8 @@ class StableAudioModel:
             inpaint_mask = inpaint_mask.float()
 
         # Seed and noise
-        seed = seed if seed != -1 else np.random.randint(0, 99999)
+        seed = seed if seed != -1 else int(np.random.randint(0, 99999))
+        self.last_seed = seed
         torch.manual_seed(seed)
         noise = torch.randn(
             [batch_size, self.model.io_channels, latent_sample_size], device=device

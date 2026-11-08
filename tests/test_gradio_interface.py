@@ -1,6 +1,6 @@
 import os
 import shutil
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
@@ -118,3 +118,28 @@ def test_export_basename_starting_with_dash(exported_dirs):
     exported_dirs.append(out_dir)
     assert os.path.basename(path) == "-version.mp3"
     assert os.path.getsize(path) > 0
+
+
+# --- generate_cond: the seed actually used is surfaced ---
+
+
+def test_generate_cond_reports_the_seed_actually_used(monkeypatch, exported_dirs):
+    import stable_audio_3.interface.diffusion_cond as dc
+
+    model = MagicMock()
+    model.generate.return_value = torch.zeros(1, 2, SAMPLE_RATE)
+    model.last_seed = 4242
+    monkeypatch.setattr(dc, "stable_audio_3_model", model)
+    monkeypatch.setattr(dc, "sample_rate", SAMPLE_RATE)
+    monkeypatch.setattr(dc, "n_loras", 0)
+    monkeypatch.setattr(
+        dc, "delete_dir_async", lambda path, delay: exported_dirs.append(path)
+    )
+
+    path, gallery = dc.generate_cond(
+        "lofi beat", seconds_total=1, seed=-1, file_format="wav", file_naming="verbose"
+    )
+
+    assert model.generate.call_args.kwargs["seed"] == -1
+    assert os.path.basename(path).endswith(".4242.wav")
+    assert gallery[0][1] == "Seed 4242"

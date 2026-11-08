@@ -174,6 +174,12 @@ def test_output_single(mock_model, mock_torchaudio_save, tmp_path):
     assert torch.equal(saved_tensor, mock_model.generate.return_value[0].cpu())
 
 
+def test_prints_seed_used(mock_model, capsys):
+    mock_model.last_seed = 4242
+    _run(["-p", "test"])
+    assert "Seed: 4242" in capsys.readouterr().out
+
+
 def test_output_batch_naming(mock_torchaudio_save, tmp_path):
     model = _make_model_mock(batch=3)
     with patch(

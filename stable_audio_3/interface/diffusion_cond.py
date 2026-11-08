@@ -212,6 +212,12 @@ def generate_cond(
 
     audio = stable_audio_3_model.generate(**generate_args)
 
+    # With seed=-1 the model draws a random seed; report the one actually used.
+    used_seed = stable_audio_3_model.last_seed
+    if used_seed is None:
+        used_seed = seed
+    print(f"Seed: {used_seed}")
+
     # Filenaming convention
     prompt_condensed = condense_prompt(prompt)
     if file_naming=="verbose":
@@ -222,7 +228,7 @@ def generate_cond(
         if sigma_max not in [1.0, 100.0]:
             # this is a common parameter to tweak, if it's not a default value, put it in the verbose filename
             basename += ".smx%s" % sigma_max
-        basename += ".%s" % seed
+        basename += ".%s" % used_seed
     elif file_naming=="prompt":
         basename = prompt_condensed
     else:
@@ -246,7 +252,7 @@ def generate_cond(
     # be deleted shortly after returning, to prevent clutter in the temp directory
     delete_dir_async(output_dir, 30)
 
-    return (output_filename, [audio_spectrogram, *preview_images])
+    return (output_filename, [(audio_spectrogram, f"Seed {used_seed}"), *preview_images])
 
 
 # ffmpeg encoder arguments for each non-WAV output format.
