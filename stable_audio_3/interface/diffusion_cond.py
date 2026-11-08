@@ -2,7 +2,9 @@ import gc
 import numpy as np
 import gradio as gr
 import re
+import shutil
 import subprocess
+import tempfile
 import torch
 import torchaudio
 import threading
@@ -227,13 +229,6 @@ def generate_cond(
         # simple e.g. "output.wav"
         basename = "output"
 
-    if file_format:
-        filename_extension = file_format.split(" ")[0].lower()
-    else:
-        filename_extension = "wav"
-    output_filename = "%s.%s" % (basename, filename_extension)
-    output_wav = "%s.wav" % basename
-
     # Cut the extra silence off the end, if the user requested a smaller seconds_total
     if cut_to_seconds_total:
         audio = audio[:,:,:seconds_total*sample_rate]
@@ -242,46 +237,66 @@ def generate_cond(
     audio = rearrange(audio, "b d n -> d (b n)")
     audio = audio.to(torch.float32).clamp(-1, 1).mul(32767).to(torch.int16).cpu()
 
-    # save as wav file
-    torchaudio.save(output_wav, audio, sample_rate)
-
-    # If file_format is other than wav, convert to other file format
-    cmd = ""
-    if file_format == "m4a aac_he_v2 32k":
-        # note: need to compile ffmpeg with --enable-libfdk_aac
-        cmd = f"ffmpeg -i \"{output_wav}\" -c:a libfdk_aac -profile:a aac_he_v2 -b:a 32k -y \"{output_filename}\""
-    elif file_format == "m4a aac_he_v2 64k":
-        cmd = f"ffmpeg -i \"{output_wav}\" -c:a libfdk_aac -profile:a aac_he_v2 -b:a 64k -y \"{output_filename}\""
-    elif file_format == "flac":
-        cmd = f"ffmpeg -i \"{output_wav}\" -y \"{output_filename}\""
-    elif file_format == "mp3 320k":
-        cmd = f"ffmpeg -i \"{output_wav}\" -b:a 320k -y \"{output_filename}\""
-    elif file_format == "mp3 128k":
-        cmd = f"ffmpeg -i \"{output_wav}\" -b:a 128k -y \"{output_filename}\""
-    elif file_format == "mp3 v0":
-        cmd = f"ffmpeg -i \"{output_wav}\" -q:a 0 -y \"{output_filename}\""
-    else: # wav
-        pass
-    if cmd:
-        cmd += " -loglevel error" # make output less verbose in the cmd window
-        subprocess.run(cmd, shell=True, check=True)
+    output_filename, output_dir = export_audio(audio, sample_rate, basename, file_format)
 
     # Let's look at a nice spectrogram too
     audio_spectrogram = audio_spectrogram_image(audio, sample_rate=sample_rate)
 
-    # Asynchronously delete the files after returning the output file, so as to prevent clutter in the directory
-    delete_files_async([output_wav, output_filename], 30)
+    # Gradio copies the returned file into its own cache, so the output directory can
+    # be deleted shortly after returning, to prevent clutter in the temp directory
+    delete_dir_async(output_dir, 30)
 
     return (output_filename, [audio_spectrogram, *preview_images])
 
-#  Asynchronously delete the given list of filenames after delay seconds. Sets up thread that sleeps for delay then deletes.
-def delete_files_async(filenames, delay):
-    def delete_files_after_delay(filenames, delay):
+
+# ffmpeg encoder arguments for each non-WAV output format.
+FFMPEG_FORMAT_ARGS = {
+    # note: the aac_he_v2 formats need ffmpeg compiled with --enable-libfdk_aac
+    "m4a aac_he_v2 32k": ["-c:a", "libfdk_aac", "-profile:a", "aac_he_v2", "-b:a", "32k"],
+    "m4a aac_he_v2 64k": ["-c:a", "libfdk_aac", "-profile:a", "aac_he_v2", "-b:a", "64k"],
+    "flac": [],
+    "mp3 320k": ["-b:a", "320k"],
+    "mp3 128k": ["-b:a", "128k"],
+    "mp3 v0": ["-q:a", "0"],
+}
+
+
+def export_audio(audio, sample_rate, basename, file_format):
+    """Save int16 audio (channels, samples) as WAV, then convert it to file_format with ffmpeg.
+
+    basename is built from the user's prompt, so ffmpeg is run with an argument list,
+    never through a shell: a prompt like "$(cmd)" must not execute. Each call writes into
+    its own fresh temporary directory, so concurrent requests can't overwrite each other's
+    files (e.g. two users both on the "output.wav" naming), and the absolute path means a
+    basename starting with "-" can't be read by ffmpeg as an option.
+
+    Unknown formats fall back to WAV. Returns (output_path, output_dir).
+    """
+    output_dir = tempfile.mkdtemp(prefix="sa3_")
+    output_wav = os.path.join(output_dir, f"{basename}.wav")
+    torchaudio.save(output_wav, audio, sample_rate)
+
+    if file_format not in FFMPEG_FORMAT_ARGS:
+        return output_wav, output_dir
+
+    extension = file_format.split(" ")[0].lower()
+    output_path = os.path.join(output_dir, f"{basename}.{extension}")
+    cmd = [
+        "ffmpeg", "-loglevel", "error", "-y",
+        "-i", output_wav,
+        *FFMPEG_FORMAT_ARGS[file_format],
+        output_path,
+    ]
+    subprocess.run(cmd, check=True)
+    return output_path, output_dir
+
+
+#  Asynchronously delete the given directory after delay seconds. Sets up thread that sleeps for delay then deletes.
+def delete_dir_async(path, delay):
+    def delete_dir_after_delay(path, delay):
         time.sleep(delay)  # Wait for the specified delay
-        for filename in filenames:
-            if os.path.exists(filename):
-                os.remove(filename)  # Delete the file
-    threading.Thread(target=delete_files_after_delay, args=(filenames, delay)).start()
+        shutil.rmtree(path, ignore_errors=True)
+    threading.Thread(target=delete_dir_after_delay, args=(path, delay), daemon=True).start()
 
 def create_sampling_ui(stable_audio_3_model, default_prompt=None):
     global n_loras
