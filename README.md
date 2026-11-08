@@ -120,7 +120,13 @@ Launch the Gradio UI:
 uv run python run_gradio.py --model medium
 ```
 
-This starts a local web interface with a shareable link. To load a LoRA checkpoint:
+This starts a local web interface at http://127.0.0.1:7860. To reach it from other machines, use `--server-name 0.0.0.0` on a trusted network, or `--share` for a public gradio.live link. Anyone with a share link can generate on your machine, so pair it with a login:
+
+```bash
+uv run python run_gradio.py --model medium --share --username me --password 'choose-a-password'
+```
+
+To load a LoRA checkpoint:
 
 ```bash
 uv run python run_gradio.py --model medium --lora-ckpt-path path/to/lora.ckpt

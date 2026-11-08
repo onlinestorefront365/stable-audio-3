@@ -26,10 +26,10 @@ commands on the host.
 | ID | Problem | Where | Status |
 |---|---|---|---|
 | P0.1 | **Shell injection in Gradio export.** MP3/FLAC/M4A export ran `ffmpeg` through `shell=True` with a filename built from the prompt; `condense_prompt` left `$(...)` and backticks intact. | `stable_audio_3/interface/diffusion_cond.py` | ✅ |
-| P0.2 | **Gradio is always public and never authenticated.** `launch(share=True)` is hard-coded; `--username`/`--password` are parsed but never passed to `launch()`. | `run_gradio.py` | 🚧 |
+| P0.2 | **Gradio is always public and never authenticated.** `launch(share=True)` is hard-coded; `--username`/`--password` are parsed but never passed to `launch()`. | `run_gradio.py` | ✅ |
 | P0.3 | **The random seed is lost.** With `seed=-1` the seed picked inside `generate()` is never returned, printed, or shown; the Gradio filename reads `.-1`. | `stable_audio_3/model.py`, `cli.py`, `interface/diffusion_cond.py` | 🚧 |
 | P0.4 | **Gradio output files collide.** Files are written to the working directory under fixed names (e.g. `output.wav`), so concurrent users overwrite each other. | `interface/diffusion_cond.py` | ✅ |
-| P0.5 | **`run_gradio.py` flags that do nothing.** `--model-half` can never be turned off; `--model-config`, `--ckpt-path`, `--pretransform-ckpt-path` are silently ignored. Fix: make `--no-model-half` work and fail loudly on the unsupported flags (loading local checkpoints is P1.9). | `run_gradio.py` | 🚧 |
+| P0.5 | **`run_gradio.py` flags that do nothing.** `--model-half` can never be turned off; `--model-config`, `--ckpt-path`, `--pretransform-ckpt-path` are silently ignored. Fixed: `--no-model-half` works and the unsupported flags fail loudly (loading local checkpoints is P1.9). | `run_gradio.py` | ✅ |
 | P0.6 | **`from_pretrained` accepts autoencoder names.** `all_models` includes `same-s`/`same-l`, so `StableAudioModel.from_pretrained("same-s")` passes validation and fails later with a confusing error. | `stable_audio_3/model.py` | 🚧 |
 | P0.7 | **Gradio batches are glued into one file.** `rearrange("b d n -> d (b n)")` concatenates variations end to end instead of returning one file per variation. | `interface/diffusion_cond.py` | ⬜ |
 | P0.8 | **41 MB of generated spectrograms are committed.** 222 PNGs under `optimized/tensorRT/output/` are tracked despite `.gitignore`. Untrack them (`git rm --cached`). | `optimized/tensorRT/output/` | ⬜ |
