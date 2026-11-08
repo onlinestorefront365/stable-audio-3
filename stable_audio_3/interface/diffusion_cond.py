@@ -213,7 +213,7 @@ def generate_cond(
     audio = stable_audio_3_model.generate(**generate_args)
 
     # With seed=-1 the model draws a random seed; report the one actually used.
-    used_seed = stable_audio_3_model.last_seed
+    used_seed = getattr(stable_audio_3_model, "last_seed", None)
     if used_seed is None:
         used_seed = seed
     print(f"Seed: {used_seed}")
