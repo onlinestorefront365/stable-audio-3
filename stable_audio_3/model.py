@@ -7,7 +7,7 @@ from torch.nn.functional import interpolate
 from stable_audio_3.inference.audio_utils import prepare_audio, numpy_audio_to_tensor
 from stable_audio_3.inference.sampling import sample_diffusion
 from stable_audio_3.loading_utils import load_autoencoder, load_diffusion_cond
-from stable_audio_3.model_configs import ae_models, all_models
+from stable_audio_3.model_configs import ae_models, models
 from stable_audio_3.models.lora import (
     set_lora_strength as _set_lora_strength,
     load_and_apply_loras,
@@ -47,12 +47,17 @@ class StableAudioModel:
                 )
             model_half = False
 
-        if model_name not in all_models:
+        if model_name in ae_models:
             raise ValueError(
-                f"Unknown model '{model_name}'. Valid models: {list(all_models)}"
+                f"'{model_name}' is an autoencoder, not a generation model; load it with "
+                f"AutoencoderModel.from_pretrained('{model_name}')."
+            )
+        if model_name not in models:
+            raise ValueError(
+                f"Unknown model '{model_name}'. Valid models: {list(models)}"
             )
 
-        model_cfg = all_models[model_name]
+        model_cfg = models[model_name]
         local_config, local_ckpt = model_cfg.resolve()
         with open(local_config) as f:
             model_config = json.load(f)
