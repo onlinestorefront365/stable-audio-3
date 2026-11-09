@@ -68,6 +68,7 @@ What turns the repo into something other people or apps use. Order depends on th
 | P2.3 | **Deployment recipe** | Dockerfile(s) for CPU (small models) and CUDA (medium), with model-cache volume and a one-command run. |
 | P2.4 | **DAW integration beyond Ableton on Mac** | The Ableton bridge only works with the MLX runtime. Options: port it to the PyTorch/TensorRT runtimes, or a VST3/CLAP plugin that talks to the P2.1 API. |
 | P2.5 | **Usage limits and abuse controls** | Per-key rate limits, max duration/batch per request, prompt logging policy. Needed before any public deployment. |
+| P2.6 | **In-browser inference (small models)** | 🚧 Spike: run the existing `optimized/tflite` int8 files (small DiT, SAME-S decoder, T5Gemma) in the browser with LiteRT.js on the WebAssembly CPU path, falling back to ONNX Runtime Web if LiteRT.js can't run them. Measure download size, load time, generation time and peak memory for a 30 s clip, and compare the audio with the native TFLite runtime. Go if a 30 s clip generates in under 15 s on a mid-range laptop. Constraints: ~1.15 GB first download (≈0.6 GB if text encoding stays on the server), cross-origin isolation headers for multithreading, weights are redistributed to every visitor (check the license). Medium is out of scope. |
 
 ---
 
