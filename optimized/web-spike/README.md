@@ -98,12 +98,12 @@ loudness match to 0.003 dB, spectral centroid is 244 vs 245 Hz, and mean per-ban
 
 ```bash
 # 1. native reference + parity dumps (downloads ~1.1 GB from stabilityai/stable-audio-3-optimized)
-cd optimized/tflite && python3.11 -m venv .venv-tfl && .venv-tfl/bin/pip install -r requirements.txt
-.venv-tfl/bin/python ../web-spike/native_ref.py --out ../web-spike/parity --seconds 30 --seed 42 --threads 4
+cd optimized/tflite && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python ../web-spike/native_ref.py --out ../web-spike/parity --seconds 30 --seed 42 --threads 4
 
 # 2. browser-sized model files
 cd ../web-spike && npm ci
-PY=../tflite/.venv-tfl/bin/python M=../tflite/models/tflite
+PY=../tflite/.venv/bin/python M=../tflite/models/tflite
 $PY slice_signatures.py $M/sa3-sm-music/dit_w8a8.tflite sliced/dit_w8a8_s416.tflite gcond s416
 $PY slice_signatures.py $M/same-s/dec_w8a8.tflite sliced/dec_w8a8_s256.tflite s256
 $PY t5_split.py $M/t5gemma/encoder_fp16.tflite sliced

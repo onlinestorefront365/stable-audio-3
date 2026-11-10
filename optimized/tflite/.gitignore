@@ -2,6 +2,8 @@
 # (The SentencePiece tokenizer at models/tokenizer.model IS committed — it's
 #  small and the .tflite T5Gemma is encoder-only.)
 *.tflite
+# XNNPACK weight caches the runtime writes next to each model on first load (hundreds of MB).
+*.xnnwc
 
 # Generated audio — anywhere on the tree, including output/.
 *.wav
