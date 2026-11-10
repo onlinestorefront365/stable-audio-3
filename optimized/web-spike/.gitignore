@@ -1,0 +1,5 @@
+node_modules/
+parity/
+sliced/
+out/
+out_server.log

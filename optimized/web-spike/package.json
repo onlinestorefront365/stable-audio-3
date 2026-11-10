@@ -1,0 +1,13 @@
+{
+  "name": "sa3-web-spike",
+  "description": "In-browser inference spike for Stable Audio 3 small models (ROADMAP P2.6)",
+  "scripts": {
+    "serve": "node serve.mjs",
+    "spike": "node run_spike.mjs --threads 4 --sliced 1"
+  },
+  "dependencies": {
+    "@litertjs/core": "2.6.0"
+  },
+  "private": true,
+  "type": "module"
+}
